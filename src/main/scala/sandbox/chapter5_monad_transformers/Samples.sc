@@ -5,6 +5,55 @@ import cats.syntax.applicative._ // for pure
 
 import scala.util.Try
 
+// sequencing operations
+// fail fast, fail on the first error
+
+// See the difference in the types
+
+// the next computation may fail, as it returns A1 (failure) or B1 (success)
+
+//def flatMap[A1, B1 >: B](f: A => Either[A1, B1]): Either[A1, B1] = e match {
+//  case Left(a) => f(a)
+//  case _       => e.asInstanceOf[Either[A1, B1]]
+//}
+//
+
+// operation from A to A1, t=he next computation may not fail
+///** Maps the function argument through `Left`.
+// *
+// *  {{{
+// *  Left(12).left.map(_ + 2) // Left(14)
+// *  Right[Int, Int](12).left.map(_ + 2) // Right(12)
+// *  }}}
+// */
+//def map[A1](f: A => A1): Either[A1, B] = e match {
+//  case Left(a) => Left(f(a))
+//  case _       => e.asInstanceOf[Either[A1, B]]
+//}
+
+// for comprehension is syntacic sugar for flatMap/map
+
+// all the steps must be within the same context (they must share the same types)s
+
+val optInt: Option[Int] = Option(10)
+val tryInt: Try[Int] = Try(32)
+
+// fails to compile as there is a type mismatch
+// was expecting option but you gave a try
+
+//for {
+//  myInt <- optInt
+//  myTryInt <- tryInt
+//} yield myInt + myTryInt
+
+// unify context to the most general type (in this case either)
+
+for {
+  myInt <- optInt.toRight("invalid number")
+  myOtherInt <- tryInt.toEither
+} yield myInt + myOtherInt
+
+
 /**
  * We can create instances of ListOption using the OptionT constructor, or more conveniently using pure:
  */
@@ -99,7 +148,3 @@ def addAll(a: String, b: String, c: String): Logged[Option[Int]] = {
 
 val result1 = addAll("1", "2", "3")
 val result2 = addAll("1", "a", "3") // fast failure on a to return None
-
-
-
-

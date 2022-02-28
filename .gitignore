@@ -4,3 +4,7 @@
 .idea/
 project/target/
 target/
+.metals
+.vscode
+.bloop
+.ammonite
