@@ -1,4 +1,4 @@
-package sandbox.chapter1_typeclasses
+package sandbox.chapter1_typeclasses.exercises
 
 trait Printable[A] {
   def format(value: A): String
@@ -38,7 +38,7 @@ object Main {
     val cat = Cat("Garfield", 30, "Ginger")
     Printable.print(cat)
 
-    import sandbox.chapter1_typeclasses.PrintableSyntax.PrintableOps
+    import PrintableSyntax.PrintableOps
     cat.print
   }
 }
