@@ -1,6 +1,5 @@
 package sandbox.chapter3_functors.exercises
 
-import org.omg.CORBA.BAD_PARAM
 import sandbox.chapter3_functors.exercises.Contramap_3611.Box
 
 object Imap_632 {
@@ -18,7 +17,6 @@ object Imap_632 {
 
   implicit val stringCodec: Codec[String] = new Codec[String] {
     override def encode(value: String): String = value
-
     override def decode(value: String): String = value
   }
 
