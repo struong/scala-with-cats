@@ -8,3 +8,5 @@ target/
 .vscode
 .bloop
 .ammonite
+project/project/
+project/metals.sbt
