@@ -1,68 +1,60 @@
 package sandbox.chapter10_data_validation
 
+import cats.data.Validated
 import cats._
 import cats.implicits._
-import cats.data.Validated._
-import cats.data.Validated
 
-sealed trait Check[E, A] {
+sealed trait Check[E, A, B] {
   import Check._
-
-  def apply(value: A)(implicit s: Semigroup[E]): Validated[E, A] =
-    this match {
-      case And(left, right) =>
-        (left(value), right(value)).mapN((_, _) => value)
-      case Or(left, right) =>
-        left(value) match { 
-          case Valid(v) => Valid(v)
-          case Invalid(e1) => 
-            right(value) match {
-              case Valid(v) => Valid(v)
-              case Invalid(e2) => Invalid(e1 |+| e2)
-            }
-        }
-      case Pure(func) => func(value)
-    }
-
-  def and(that: Check[E, A]): Check[E, A] = And(this, that)
-
-  def or(that: Check[E, A]): Check[E, A] = Or(this, that)
+  def apply(a: A)(implicit s: Semigroup[E]): Validated[E, B]
+  def map[C](func: B => C): Check[E, A, C] = Map[E, A, B, C](this, func)
+  def flatMap[C](f: B => Check[E, A, C]): Check[E, A, C] =
+    FlatMap[E, A, B, C](this, f)
+  def andThen[C](that: Check[E, B, C]): Check[E, A, C] =
+    AndThen[E, A, B, C](this, that)
 }
-
-final case class And[E, A](left: Check[E, A], right: Check[E, A])
-    extends Check[E, A]
-
-final case class Or[E, A](left: Check[E, A], right: Check[E, A])
-    extends Check[E, A]
-
-final case class Pure[E, A](func: A => Validated[E, A]) extends Check[E, A]
 
 object Check {
-  def pure[E, A](f: A => Validated[E, A]): Check[E, A] = Pure(f)
-}
-
-object Main extends App {
-
-  val a: Check[List[String], Int] = Check.pure { v =>
-    if (v > 2) Valid(v)
-    else Invalid(List("Must be > 2"))
+  final case class Map[E, A, B, C](that: Check[E, A, B], func: B => C)
+      extends Check[E, A, C] {
+    override def apply(a: A)(implicit s: Semigroup[E]): Validated[E, C] =
+      that(a).map(func)
   }
 
-  val b: Check[List[String], Int] = Check.pure { v =>
-    if (v < -2) Valid(v)
-    else Invalid(List("Must be < -2"))
+  final case class Pure[E, A, B](func: A => Validated[E, B])
+      extends Check[E, A, B] {
+    def apply(a: A)(implicit s: Semigroup[E]): Validated[E, B] =
+      func(a)
   }
 
-  val andCheck: Check[List[String], Int] = a and b
-  val orCheck: Check[List[String], Int] = a or b
+  final case class FlatMap[E, A, B, C](
+      that: Check[E, A, B],
+      func: B => Check[E, A, C]
+  ) extends Check[E, A, C] {
 
-  println("And Checks")
-  println(andCheck(5))
-  println(andCheck(0))
-  println(andCheck(-3))
+    override def apply(a: A)(implicit s: Semigroup[E]): Validated[E, C] =
+      that(a).withEither(_.flatMap(b => func(b)(a).toEither))
+  }
 
-  println("Or Checks")
-  println(orCheck(5))
-  println(orCheck(0))
-  println(orCheck(-3))
+  final case class AndThen[E, A, B, C](
+      check1: Check[E, A, B],
+      check2: Check[E, B, C]
+  ) extends Check[E, A, C] {
+
+    override def apply(a: A)(implicit s: Semigroup[E]): Validated[E, C] =
+      check1(a).withEither(_.flatMap(b => check2(b).toEither))
+
+  }
+
+  final case class PurePredicate[E, A](pred: Predicate[E, A])
+      extends Check[E, A, A] {
+
+    def apply(a: A)(implicit s: Semigroup[E]): Validated[E, A] =
+      pred(a)
+  }
+
+  def apply[E, A](pred: Predicate[E, A]): Check[E, A, A] =
+    PurePredicate(pred)
+  def apply[E, A, B](func: A => Validated[E, B]): Check[E, A, B] =
+    Pure(func)
 }
